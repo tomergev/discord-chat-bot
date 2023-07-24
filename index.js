@@ -13,7 +13,7 @@ const get = require('lodash.get')
 const { generateResponse } = require('./openai')
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] })
-const rest = new REST().setToken(process.env.DISCORD_TOKEN_SECRET)
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN_SECRET)
 
 const chatGptCommand = {
   data: new SlashCommandBuilder()
@@ -36,17 +36,22 @@ const chatGptCommand = {
 client.login(process.env.DISCORD_TOKEN_SECRET)
 client.once(Events.ClientReady, (c) => {
   console.log(`Ready! Logged in as ${c.user.tag}`)
-  const guilds = c?.guilds?.cache || []
-  guilds.forEach((guild) => {
-    rest.put(
-      Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, guild.id),
-      { body: [chatGptCommand.data] },
-    )
-  })
+  // const guilds = c?.guilds?.cache || []
+  // guilds.forEach((guild) => {
+  //   rest.put(
+  //     Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, guild.id),
+  //     { body: [chatGptCommand.data] },
+  //   )
+  // })
 })
 
 client.commands = new Collection()
 client.commands.set(chatGptCommand.data.name, chatGptCommand)
+
+rest.put(
+  Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID),
+  { body: [chatGptCommand.data] },
+)
 
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -69,4 +74,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true })
     }
   }
+})
+
+// TODO: When a bot is authorized on a new guild while the app is running. The /ask command is being registered, it comes up as an option on the new sever, guild
+// But, the /ask command doesnt work.... ??? 
+
+// client.on(Events.GuildCreate, (guild) => {
+//   console.log(guild.id, guild)
+//   rest.put(
+//     Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, guild.id),
+//     { body: [chatGptCommand.data] },
+//   )
+// })
+
+client.on(Events.Error, (err) => {
+  console.error(err)
 })
