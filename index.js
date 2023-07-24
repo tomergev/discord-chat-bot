@@ -23,7 +23,7 @@ try {
   
   const chatGptCommand = {
     data: new SlashCommandBuilder()
-      .setName('chatgpt')
+      .setName('ask')
       .setDescription('What would you like to know?')
       .addStringOption((option) => (
         option.setName('prompt')
@@ -31,11 +31,15 @@ try {
           .setRequired(true)
       )),
       async execute(interaction) {
-        const prompt = interaction.options.getString('prompt')
-        // TODO: The code below is not working. Figure out why
-        const { data } = await generateResponse(`${prompt}. The response must be less than 2000 characters`) || {}
-        const reply = get(data, 'choices.0.message.content')
-        await interaction.reply({ content: reply, ephemeral: true })
+        try {
+          await interaction.deferReply({ ephemeral: true })
+          const prompt = interaction.options.getString('prompt')
+          const { data } = await generateResponse(`${prompt}. The response must be less than 2000 characters`) || {}
+          const reply = get(data, 'choices.0.message.content')
+          interaction.editReply(reply)
+        } catch (err) {
+          // console.error(err)
+        }
       },
   }
 
@@ -59,13 +63,9 @@ try {
       return
     }
   
-    command.execute(interaction).catch((err) => {
-      console.error(err)
-      // TODO: Should I create a global error handling message or make it more customizable
-      interaction.reply('An error has occured. Sorry!')
-    })
+    command.execute(interaction)
   })
 
 } catch (err) {
-  console.error(err)
+  // console.error(err)
 }
