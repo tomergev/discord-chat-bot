@@ -2,6 +2,14 @@ const { SlashCommandBuilder } = require('discord.js')
 const get = require('lodash.get')
 const { generateResponse } = require('../openai')
 
+const splitReplyEvery2000Chars = (reply) => {
+  const arr = []
+  for (let index = 0; index < reply.length; index += 2000) {
+    arr.push(reply.slice(index, index + 2000))
+  }
+  return arr
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ask')
@@ -14,10 +22,14 @@ module.exports = {
     async execute(interaction) {
       await interaction.deferReply({ ephemeral: true })
       const prompt = interaction.options.getString('prompt')
-      // TODO: If response is more than 2,000 characters, find a way to make it appear over multiple messages
       // TODO: Create a button that allows users to copy the message
-      const { data } = await generateResponse(`${prompt}. The response must be less than 2000 characters`) || {}
-      const reply = get(data, 'choices.0.message.content')
-      interaction.editReply(reply)
+      const { data } = await generateResponse(prompt) || {}
+      const reply = get(data, 'choices.0.message.content', '')
+      if (reply.length <= 2000) return interaction.editReply(reply)
+      const replies = splitReplyEvery2000Chars(reply)
+      for (const [index, replyChunk] of replies.entries()) {
+        if (index === 0) await interaction.editReply(replyChunk)
+        await interaction.followUp({ content: replyChunk, ephemeral: true })
+      }
     },
 }
