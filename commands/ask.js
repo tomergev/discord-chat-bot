@@ -26,10 +26,11 @@ module.exports = {
       const { data } = await generateResponse(prompt) || {}
       const reply = get(data, 'choices.0.message.content', '')
       if (reply.length <= 2000) return interaction.editReply(reply)
+      
       const replies = splitReplyEvery2000Chars(reply)
       for (const [index, replyChunk] of replies.entries()) {
         if (index === 0) await interaction.editReply(replyChunk)
-        await interaction.followUp({ content: replyChunk, ephemeral: true })
+        else await interaction.followUp({ content: replyChunk, ephemeral: true })
       }
     },
 }
